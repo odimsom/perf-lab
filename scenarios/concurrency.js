@@ -25,9 +25,10 @@ import { sleep } from 'k6';
 import { Trend, Rate, Counter } from 'k6/metrics';
 import { baseUrl, assertOk, think } from '../utils/helpers.js';
 
-const BASE_URL  = __ENV.BASE_URL  || 'http://localhost:8080';
-const TENANT_ID = __ENV.TENANT_ID || '00000000-0000-0000-0000-000000000001';
-const ENDPOINT  = __ENV.ENDPOINT  || '/catalog';
+const BASE_URL   = __ENV.BASE_URL   || 'http://localhost:8080';
+const TENANT_ID  = __ENV.TENANT_ID  || '00000000-0000-0000-0000-000000000001';
+const ENDPOINT   = __ENV.ENDPOINT   || '/catalog';
+const AUTH_TOKEN = __ENV.AUTH_TOKEN || '';
 
 const responseTime = new Trend('response_time', true);
 const throughput   = new Counter('requests_total');
@@ -50,9 +51,10 @@ export const options = {
 };
 
 export default function () {
-  const url = baseUrl(BASE_URL, ENDPOINT, { tenant_id: TENANT_ID });
+  const url     = baseUrl(BASE_URL, ENDPOINT, { tenant_id: TENANT_ID });
+  const headers = AUTH_TOKEN ? { Authorization: `Bearer ${AUTH_TOKEN}` } : {};
 
-  const res = http.get(url, { timeout: '10s' });
+  const res = http.get(url, { headers, timeout: '10s' });
 
   responseTime.add(res.timings.duration);
   throughput.add(1);
@@ -63,14 +65,15 @@ export default function () {
 
 export function handleSummary(data) {
   const m = data.metrics;
+  const dur = m['http_req_duration']?.values ?? {};
   const summary = {
-    total_requests:   m['requests_total']?.values?.count        ?? 0,
-    req_per_sec:      m['http_reqs']?.values?.rate              ?? 0,
-    p50_ms:           m['http_req_duration']?.values?.['p(50)'] ?? 0,
-    p95_ms:           m['http_req_duration']?.values?.['p(95)'] ?? 0,
-    p99_ms:           m['http_req_duration']?.values?.['p(99)'] ?? 0,
-    max_ms:           m['http_req_duration']?.values?.max       ?? 0,
-    error_rate:       m['error_rate']?.values?.rate             ?? 0,
+    total_requests: m['requests_total']?.values?.count ?? 0,
+    req_per_sec:    m['http_reqs']?.values?.rate       ?? 0,
+    p50_ms:         dur['med']    ?? dur['p(50)']      ?? 0,
+    p95_ms:         dur['p(95)']                       ?? 0,
+    p99_ms:         dur['p(99)']                       ?? 0,
+    max_ms:         dur['max']                         ?? 0,
+    error_rate:     m['error_rate']?.values?.rate      ?? 0,
   };
 
   console.log('\n── Concurrency Summary ──────────────────');

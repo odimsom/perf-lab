@@ -24,9 +24,10 @@ import {
   baseUrl, assertOk, isCacheHit,
 } from '../utils/helpers.js';
 
-const BASE_URL  = __ENV.BASE_URL  || 'http://localhost:8080';
-const TENANT_ID = __ENV.TENANT_ID || '00000000-0000-0000-0000-000000000001';
-const ENDPOINT  = __ENV.ENDPOINT  || '/catalog';
+const BASE_URL   = __ENV.BASE_URL   || 'http://localhost:8080';
+const TENANT_ID  = __ENV.TENANT_ID  || '00000000-0000-0000-0000-000000000001';
+const ENDPOINT   = __ENV.ENDPOINT   || '/catalog';
+const AUTH_TOKEN = __ENV.AUTH_TOKEN || '';
 
 export const options = {
   scenarios: {
@@ -57,8 +58,10 @@ export const options = {
 };
 
 export default function () {
-  const url = baseUrl(BASE_URL, ENDPOINT, { tenant_id: TENANT_ID });
+  const url     = baseUrl(BASE_URL, ENDPOINT, { tenant_id: TENANT_ID });
+  const headers = AUTH_TOKEN ? { Authorization: `Bearer ${AUTH_TOKEN}` } : {};
   const res = http.get(url, {
+    headers,
     tags: { endpoint: ENDPOINT },
     timeout: '10s',
   });

@@ -15,8 +15,9 @@ import http from 'k6/http';
 import { check, sleep } from 'k6';
 import { baseUrl } from '../utils/helpers.js';
 
-const BASE_URL  = __ENV.BASE_URL  || 'http://localhost:8080';
-const TENANT_ID = __ENV.TENANT_ID || '00000000-0000-0000-0000-000000000001';
+const BASE_URL   = __ENV.BASE_URL   || 'http://localhost:8080';
+const TENANT_ID  = __ENV.TENANT_ID  || '00000000-0000-0000-0000-000000000001';
+const AUTH_TOKEN = __ENV.AUTH_TOKEN || '';
 
 const ENDPOINTS = [
   { path: '/health',  params: {} },
@@ -33,9 +34,10 @@ export const options = {
 };
 
 export default function () {
+  const headers = AUTH_TOKEN ? { Authorization: `Bearer ${AUTH_TOKEN}` } : {};
   for (const ep of ENDPOINTS) {
     const url = baseUrl(BASE_URL, ep.path, ep.params);
-    const res = http.get(url, { timeout: '15s' });
+    const res = http.get(url, { headers, timeout: '15s' });
 
     check(res, {
       [`${ep.path} → 200`]: r => r.status === 200,

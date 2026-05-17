@@ -6,6 +6,7 @@ services:
       BASE_URL:       ${BASE_URL:-http://host.docker.internal:8080}
       TENANT_ID:      ${TENANT_ID:-00000000-0000-0000-0000-000000000001}
       ENDPOINT:       ${ENDPOINT:-/catalog}
+      AUTH_TOKEN:     ${AUTH_TOKEN:-}
       REPLICA_HEADER: ${REPLICA_HEADER:-X-Replica-Id}
       K6_OUT:         influxdb=http://influxdb:8086/k6
     volumes:
