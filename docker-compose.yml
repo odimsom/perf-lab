@@ -1,0 +1,60 @@
+services:
+  k6:
+    image: grafana/k6:latest
+    command: run /scenarios/${SCENARIO:-smoke.js}
+    environment:
+      BASE_URL:       ${BASE_URL:-http://host.docker.internal:8080}
+      TENANT_ID:      ${TENANT_ID:-00000000-0000-0000-0000-000000000001}
+      ENDPOINT:       ${ENDPOINT:-/catalog}
+      REPLICA_HEADER: ${REPLICA_HEADER:-X-Replica-Id}
+      K6_OUT:         influxdb=http://influxdb:8086/k6
+    volumes:
+      - ./scenarios:/scenarios
+      - ./utils:/utils
+      - ./reports:/reports
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      influxdb:
+        condition: service_healthy
+    networks: [perf]
+
+  # ── InfluxDB: stores k6 metrics ───────────────────────────────────────────
+  influxdb:
+    image: influxdb:1.8-alpine
+    environment:
+      INFLUXDB_DB: k6
+    ports:
+      - "8086:8086"
+    volumes:
+      - influx-data:/var/lib/influxdb
+    healthcheck:
+      test: ["CMD", "influx", "-execute", "SHOW DATABASES"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks: [perf]
+
+  # ── Grafana: real-time dashboard ──────────────────────────────────────────
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3001:3000"
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+      GF_AUTH_DISABLE_LOGIN_FORM: "true"
+    volumes:
+      - ./dashboards/grafana-provisioning:/etc/grafana/provisioning
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - influxdb
+    networks: [perf]
+
+volumes:
+  influx-data:
+  grafana-data:
+
+networks:
+  perf:
+    driver: bridge
